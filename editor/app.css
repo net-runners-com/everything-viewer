@@ -55,3 +55,4 @@ html, body { margin: 0; height: 100%; background: var(--orca-background); color:
 .tree-key { color: var(--orca-foreground); font-weight: 600; }
 .t-string { color: #3fb950; } .t-number { color: #79c0ff; } .t-boolean { color: #d2a8ff; } .t-null { color: var(--orca-muted-foreground); }
 html.light .t-string { color: #116329; } html.light .t-number { color: #0550ae; } html.light .t-boolean { color: #8250df; }
+.pages { font-variant-numeric: tabular-nums; }

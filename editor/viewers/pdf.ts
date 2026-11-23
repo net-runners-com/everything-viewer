@@ -16,8 +16,11 @@ async function showPdf(root: HTMLElement, data: Uint8Array, t: Translate): Promi
 
   root.replaceChildren()
   const bar = el('div', 'bar')
-  const pagesLabel = el('span', 'muted')
-  pagesLabel.textContent = t(`${pdf.numPages} ページ`, `${pdf.numPages} pages`)
+  const pagesLabel = el('span', 'muted pages')
+  const showPage = (n: number) => {
+    pagesLabel.textContent = `${n} / ${pdf.numPages}`
+  }
+  showPage(1)
   const zoomLabel = el('span', 'zoom')
   const minus = button('−', t('縮小', 'Zoom out'))
   const plus = button('+', t('拡大', 'Zoom in'))
@@ -107,6 +110,18 @@ async function showPdf(root: HTMLElement, data: Uint8Array, t: Translate): Promi
     lastWidth = scroller.clientWidth
     rerender()
   }).observe(scroller)
+  // The page crossing the upper third of the view is the one being read.
+  let ticking = false
+  scroller.addEventListener('scroll', () => {
+    if (ticking) return
+    ticking = true
+    requestAnimationFrame(() => {
+      ticking = false
+      const mark = scroller.getBoundingClientRect().top + scroller.clientHeight / 3
+      const reading = slots.find((s) => s.box.getBoundingClientRect().bottom > mark)
+      showPage(reading ? Number(reading.box.dataset.page) : pdf.numPages)
+    })
+  })
   layout()
 }
 

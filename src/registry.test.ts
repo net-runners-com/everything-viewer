@@ -13,10 +13,11 @@ test('formats.json maps extensions to a format, its viewer and its converters', 
   assert.deepEqual(reg.chain(reg.formatFor('pages')!, 'convert'), { output: 'pdf', converters: ['libreoffice'] })
   assert.deepEqual(reg.chain(reg.formatFor('wmv')!, 'convert'), { output: 'mp4', converters: ['ffmpeg'] })
   assert.equal(reg.chain(reg.formatFor('json')!, 'convert'), null)
+  assert.equal(reg.formatFor('pptx')?.viewer, 'pdf') // with a page toolbar, replacing the Presentation Viewer plugin
 })
 
 test('formats.json leaves out what Orca or an installed plugin already shows', () => {
-  for (const ext of ['key', 'md', 'csv', 'html', 'svg', 'ipynb', 'png', 'pdf', 'mp4', 'mp3', 'docx', 'xlsx', 'pptx', 'stl', 'glb', 'ttf', 'heic']) {
+  for (const ext of ['key', 'md', 'csv', 'html', 'svg', 'ipynb', 'png', 'pdf', 'mp4', 'mp3', 'docx', 'xlsx', 'stl', 'glb', 'ttf', 'heic']) {
     assert.equal(reg.formatFor(ext), null, ext)
   }
 })

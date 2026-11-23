@@ -72,6 +72,24 @@
       ]
     },
     {
+      "id": "presentation",
+      "title": "Slides",
+      "extensions": [
+        "pptx",
+        "pptm",
+        "ppsx",
+        "ppsm",
+        "potx",
+        "potm"
+      ],
+      "content": "bytes",
+      "priority": "default",
+      "viewer": "pdf",
+      "convert": [
+        "libreoffice"
+      ]
+    },
+    {
       "id": "blender",
       "title": "3D",
       "extensions": [

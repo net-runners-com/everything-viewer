@@ -1,12 +1,13 @@
 # Convert Viewer
 
 Read-only Orca editors for files nothing else in Orca shows. Orca's own viewers and the installed
-plugins (Word, Spreadsheet, Presentation, Media, Audio, Image, Font, 3D, Markdown) cover the rest,
+plugins (Word, Spreadsheet, Media, Audio, Image, Font, 3D, Markdown) cover the rest,
 so this plugin leaves those alone.
 
 | Format | Suffixes | How |
 | --- | --- | --- |
 | Legacy Office, OpenDocument, Visio, Publisher, Works, Pages, Numbers | `.doc .ppt .odt .vsd .pub .pages .numbers …` | LibreOffice → PDF, shown with pdf.js |
+| PowerPoint (replaces the Presentation Viewer plugin, which has no page toolbar; it is disabled) | `.pptx .pptm .ppsx .ppsm .potx .potm` | LibreOffice → PDF, with page / zoom toolbar |
 | Blender | `.blend .abc` | Blender → GLB, shown with three.js |
 | JPEG 2000 | `.jp2` | sips → PNG |
 | Older video / audio | `.wmv .flv .mpg .vob … / .aiff .wma .amr …` | ffmpeg → MP4 |
