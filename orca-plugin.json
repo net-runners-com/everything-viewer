@@ -123,5 +123,31 @@
         "priority": "default"
       }
     ]
-  }
+  },
+  "cover": {
+    "path": "assets/cover.png",
+    "alt": "A PowerPoint deck shown as pages in Everything Viewer, with the current page and zoom in the toolbar"
+  },
+  "screenshots": [
+    {
+      "path": "assets/presentation.png",
+      "alt": "A .pptx deck converted by LibreOffice and shown page by page",
+      "caption": "PowerPoint, with page and zoom toolbar"
+    },
+    {
+      "path": "assets/document.png",
+      "alt": "A legacy Word .doc report with a table, shown as a page",
+      "caption": "Legacy Office documents (.doc, .ppt, .odt, Pages, Numbers…)"
+    },
+    {
+      "path": "assets/blender.png",
+      "alt": "A Blender .blend scene with a monkey head, sphere, cube and torus on a floor grid",
+      "caption": "Blender scenes in 3D"
+    },
+    {
+      "path": "assets/tree.png",
+      "alt": "A docker compose YAML file as an expanded, filterable tree",
+      "caption": "JSON, YAML, TOML and XML as a tree"
+    }
+  ]
 }

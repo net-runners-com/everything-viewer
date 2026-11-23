@@ -41,11 +41,12 @@ function showTree(root: HTMLElement, parse: () => unknown, t: T): void {
       row.style.paddingLeft = `${depth * 14 + 6}px`
       row.title = n.path.replace(/^\$\.?/, '') // the path without the root marker
       const isOpen = q ? true : open.has(n.path)
-      const caret = el('span', 'caret', n.children ? (isOpen ? '▾' : '▸') : '')
+      const expandable = !!n.children?.length // an empty {} or [] has nothing to open
+      const caret = el('span', 'caret', expandable ? (isOpen ? '▾' : '▸') : '')
       row.append(caret, el('span', 'tree-key', n.key))
       if (n.children) row.append(el('span', 'muted', ` ${n.type === 'array' ? `[${n.count}]` : `{${n.count}}`}`))
       else row.append(el('span', 'muted', ': '), el('span', `tree-val t-${n.type}`, n.type === 'string' ? JSON.stringify(n.preview) : n.preview))
-      if (n.children) {
+      if (expandable) {
         row.classList.add('branch')
         row.onclick = () => {
           if (open.has(n.path)) open.delete(n.path)

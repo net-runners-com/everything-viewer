@@ -61,7 +61,8 @@ async function showGlb(root: HTMLElement, data: Uint8Array, t: Translate): Promi
   const controls = new OrbitControls(camera, renderer.domElement)
   controls.enableDamping = true
   const home = () => {
-    const dist = radius / Math.sin((camera.fov * Math.PI) / 360)
+    // The bounding sphere fits with room to spare; 0.8 keeps the model filling most of the view.
+    const dist = (0.8 * radius) / Math.sin((camera.fov * Math.PI) / 360)
     camera.position.copy(center).add(new THREE.Vector3(1, 0.7, 1).normalize().multiplyScalar(dist))
     controls.target.copy(center)
     controls.update()
