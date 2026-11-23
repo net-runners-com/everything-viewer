@@ -4,8 +4,52 @@
   "name": "Convert Viewer",
   "version": "0.1.0",
   "description": "Read legacy Office, OpenDocument, Visio, Publisher and iWork files as PDF (LibreOffice) and .blend scenes in 3D (Blender) in Orca's editor.",
-  "engines": { "orca": ">=1.4.248" },
+  "engines": {
+    "orca": ">=1.4.248"
+  },
   "execution": "trusted-worker",
   "pluginApi": 1,
-  "main": "src/worker.ts"
+  "main": "src/worker.ts",
+  "contributes": {
+    "customEditors": [
+      {
+        "id": "documents",
+        "title": "Document",
+        "extensions": [
+          ".doc",
+          ".dot",
+          ".ppt",
+          ".pps",
+          ".pot",
+          ".odt",
+          ".ott",
+          ".odp",
+          ".otp",
+          ".odg",
+          ".otg",
+          ".vsd",
+          ".vsdx",
+          ".pub",
+          ".wpd",
+          ".wps",
+          ".key",
+          ".pages",
+          ".numbers"
+        ],
+        "entry": "editor/main.ts",
+        "frame": "isolated",
+        "contentKind": "bytes"
+      },
+      {
+        "id": "blender",
+        "title": "Blender",
+        "extensions": [
+          ".blend"
+        ],
+        "entry": "editor/main.ts",
+        "frame": "isolated",
+        "contentKind": "bytes"
+      }
+    ]
+  }
 }
