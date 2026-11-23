@@ -39,7 +39,7 @@ function showTree(root: HTMLElement, parse: () => unknown, t: T): void {
       if (q && !matches(n, q)) return
       const row = el('div', 'tree-row')
       row.style.paddingLeft = `${depth * 14 + 6}px`
-      row.title = n.path
+      row.title = n.path.replace(/^\$\.?/, '') // the path without the root marker
       const isOpen = q ? true : open.has(n.path)
       const caret = el('span', 'caret', n.children ? (isOpen ? '▾' : '▸') : '')
       row.append(caret, el('span', 'tree-key', n.key))
@@ -56,7 +56,9 @@ function showTree(root: HTMLElement, parse: () => unknown, t: T): void {
       rows.push(row)
       if (n.children && isOpen) n.children.forEach((c) => walk(c, depth + 1))
     }
-    walk(tree, 0)
+    // The root is the file itself: show its entries at the top level instead of a `$` row.
+    if (tree.children) tree.children.forEach((c) => walk(c, 0))
+    else walk(tree, 0)
     list.replaceChildren(...rows.slice(0, 5000))
   }
   filter.oninput = render
