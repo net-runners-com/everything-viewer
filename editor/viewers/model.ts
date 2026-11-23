@@ -1,12 +1,14 @@
 // Shows a GLB with the vendored three.js: orbit/zoom/pan, a floor grid, framed to the model.
-import * as THREE from './vendor/three/three.module.min.js'
-import { GLTFLoader } from './vendor/three/GLTFLoader.js'
-import { OrbitControls } from './vendor/three/OrbitControls.js'
+import * as THREE from '../vendor/three/three.module.min.js'
+import { GLTFLoader } from '../vendor/three/GLTFLoader.js'
+import { OrbitControls } from '../vendor/three/OrbitControls.js'
+
+import type { Translate, View } from '../lib/view'
 
 const cssColor = (name: string, fallback: string) =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback
 
-export async function showGlb(root: HTMLElement, data: Uint8Array, t: (ja: string, en: string) => string): Promise<void> {
+async function showGlb(root: HTMLElement, data: Uint8Array, t: Translate): Promise<void> {
   const gltf = await new GLTFLoader().parseAsync(data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength), '')
 
   root.replaceChildren()
@@ -94,3 +96,6 @@ export async function showGlb(root: HTMLElement, data: Uint8Array, t: (ja: strin
     renderer.render(scene, camera)
   })
 }
+
+const view: View = (ctx) => showGlb(ctx.root, ctx.data!, ctx.t)
+export default view

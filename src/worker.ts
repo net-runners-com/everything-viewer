@@ -1,40 +1,30 @@
-// The plugin's worker: receives uploaded file bytes, converts them in background jobs with the Mac's
-// own tools (LibreOffice, Keynote, Blender, sips, ffmpeg) into a content-hash cache, and serves the
-// result back in chunks.
+// The plugin's worker: receives uploaded file bytes, runs the converters formats.json names for the
+// file's suffix in background jobs, caches the output by content hash, and serves it back in chunks.
 import { createHash } from 'node:crypto'
-import { closeSync, existsSync, mkdirSync, openSync, readSync, renameSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs'
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, renameSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import type { OrcaWorkerApi } from 'orca/worker'
-import { BLENDER_EXPORT_PY, Uploads, blenderArgs, ffmpegArgs, keynoteArgs, pruneCache, sipsArgs, sofficeArgs } from './convert'
-import { canConvert, type OutKind } from './formats'
-import { DOWNLOAD_CHUNK, type JobState, type ToolError } from './protocol'
+import { Uploads, pruneCache } from './convert'
+import type { Converter, ExecFn } from './converters/types'
+import { DOWNLOAD_CHUNK, type JobKey, type JobState, type ToolError } from './protocol'
+import { createRegistry, type ConverterSpec, type OutKind, type Registry } from './registry'
 
-export type ExecFn = (cmd: string, args: string[], opts?: { timeoutMs?: number; signal?: AbortSignal }) => Promise<{ stdout: string }>
-type Find = () => string | null
-export type Tools = { soffice: Find; blender: Find; ffmpeg: Find; sips: Find; keynote: Find }
-export type WorkerDeps = { exec: ExecFn; cacheDir: string; tools: Tools }
+export type WorkerDeps = {
+  registry: Registry
+  exec: ExecFn
+  cacheDir: string
+  /** The converter tool's path on this Mac, or null when it isn't installed. */
+  locate: (converterId: string) => string | null
+  /** The code of `src/converters/<id>.ts`. */
+  loadConverter: (converterId: string) => Promise<Converter>
+}
 
 const HASH_RE = /^[0-9a-f]{64}$/
-const KINDS: OutKind[] = ['pdf', 'glb', 'png', 'mp4']
 const CACHE_LIMITS = { maxBytes: 2 * 1024 ** 3, maxAgeMs: 30 * 86_400_000 }
-const MIN = 60_000
-
-const MISSING: Record<string, string> = {
-  soffice: 'LibreOffice が見つかりません。`brew install --cask libreoffice` で入れてください。',
-  blender: 'Blender が見つかりません。/Applications に Blender を入れてください。',
-  ffmpeg: 'ffmpeg が見つかりません。`brew install ffmpeg` で入れてください。',
-  sips: 'sips が見つかりません（macOS 標準のツールです）。'
-}
 
 class BadRequest extends Error {}
-class Missing extends Error {
-  toolError: ToolError
-  constructor(tool: keyof typeof MISSING) {
-    super(MISSING[tool])
-    this.toolError = { kind: 'not_found', message: MISSING[tool] }
-  }
-}
+const toolError = (kind: ToolError['kind'], message: string) => Object.assign(new Error(message), { toolError: { kind, message } })
 
 function toToolError(error: unknown): ToolError {
   const t = (error as { toolError?: ToolError })?.toolError
@@ -44,51 +34,41 @@ function toToolError(error: unknown): ToolError {
 }
 
 export function createWorker(deps: WorkerDeps) {
-  const { exec, cacheDir, tools } = deps
+  const { registry, exec, cacheDir, locate, loadConverter } = deps
   const tmpRoot = join(cacheDir, 'tmp')
-  const outPath = (hash: string, kind: OutKind) => {
+
+  /** The stage's converters for a suffix, and the cache file their output lands in. */
+  const resolve = ({ hash, ext, stage }: JobKey) => {
     if (!HASH_RE.test(hash)) throw new BadRequest('bad hash')
-    if (!KINDS.includes(kind)) throw new BadRequest('bad kind')
-    return join(cacheDir, `${hash}.${kind}`)
-  }
-  const need = (tool: keyof typeof MISSING): string => {
-    const path = tools[tool as keyof Tools]()
-    if (!path) throw new Missing(tool)
-    return path
+    if (stage !== 'convert' && stage !== 'fallback') throw new BadRequest('bad stage')
+    const format = registry.formatFor(String(ext))
+    const chain = format && registry.chain(format, stage)
+    if (!chain) throw new BadRequest(`.${ext} has nothing to ${stage} with`)
+    return { ext: String(ext).toLowerCase(), chain, out: join(cacheDir, `${hash}.${chain.output}`) }
   }
 
-  /** Runs the right tool; resolves with the file it produced inside `job`. */
-  async function run(src: string, ext: string, kind: OutKind, job: string): Promise<string> {
-    const produced = join(job, `out.${kind}`)
-    if (kind === 'pdf') {
-      if (ext === 'key' && tools.keynote()) {
-        try {
-          await exec(tools.keynote()!, keynoteArgs(src, produced), { timeoutMs: 2 * MIN })
-          if (existsSync(produced)) return produced
-        } catch {
-          // No Automation permission or Keynote failed: LibreOffice is the fallback.
-        }
+  /** Tries each converter in order; an uninstalled one is skipped, a failing one falls through. */
+  async function runChain(src: string, ext: string, output: OutKind, ids: string[], dir: string): Promise<string> {
+    let last: unknown = null
+    for (const id of ids) {
+      const tool = locate(id)
+      if (!tool) continue
+      const out = join(dir, `out.${output}`)
+      try {
+        const converter = await loadConverter(id)
+        const produced = await converter.run({ src, ext, dir, out, tool, cacheDir, exec })
+        if (existsSync(produced) && statSync(produced).size > 0) return produced
+        last = toolError('failed', `${registry.file.converters[id].label}: 変換結果が作られませんでした (.${ext})`)
+      } catch (error) {
+        last = error
       }
-      await exec(need('soffice'), sofficeArgs(src, job, join(cacheDir, 'lo-profile')), { timeoutMs: 2 * MIN })
-      return join(job, 'in.pdf')
     }
-    if (kind === 'glb') {
-      const script = join(job, 'export.py')
-      writeFileSync(script, BLENDER_EXPORT_PY)
-      await exec(need('blender'), blenderArgs(src, produced, script), { timeoutMs: 5 * MIN })
-      return produced
-    }
-    if (kind === 'png') {
-      await exec(need('sips'), sipsArgs(src, produced), { timeoutMs: MIN })
-      return produced
-    }
-    await exec(need('ffmpeg'), ffmpegArgs(src, produced), { timeoutMs: 30 * MIN })
-    return produced
+    throw last ?? toolError('not_found', registry.file.converters[ids[0]].missing)
   }
 
   return function activate(orca: OrcaWorkerApi): void {
     mkdirSync(cacheDir, { recursive: true })
-    rmSync(tmpRoot, { recursive: true, force: true }) // leftovers of a worker that was killed mid-job
+    rmSync(tmpRoot, { recursive: true, force: true }) // leftovers of a worker killed mid-job
     pruneCache(cacheDir, CACHE_LIMITS)
 
     const uploads = new Uploads()
@@ -96,38 +76,36 @@ export function createWorker(deps: WorkerDeps) {
     // One conversion at a time: these tools are heavy and soffice dislikes concurrency.
     let queue: Promise<unknown> = Promise.resolve()
 
-    const state = (hash: string, kind: OutKind): JobState => {
-      const p = outPath(hash, kind)
-      if (existsSync(p)) return { state: 'ready', size: statSync(p).size }
-      return jobs.get(`${hash}.${kind}`) ?? { state: 'missing' }
+    const state = (key: JobKey): JobState => {
+      const { out } = resolve(key)
+      if (existsSync(out)) return { state: 'ready', size: statSync(out).size }
+      return jobs.get(out) ?? { state: 'missing' }
     }
 
-    function start(input: Buffer, hash: string, ext: string, kind: OutKind): void {
-      const key = `${hash}.${kind}`
-      jobs.set(key, { state: 'running' })
-      const job = join(tmpRoot, `${hash}-${kind}-${Date.now()}`)
+    function start(input: Buffer, key: JobKey): JobState {
+      const { ext, chain, out } = resolve(key)
+      const running: JobState = { state: 'running', label: chain.converters.map((id) => registry.file.converters[id].label).join(' / ') }
+      jobs.set(out, running)
+      const dir = join(tmpRoot, `${key.hash}-${key.stage}-${Date.now()}`)
       const work = async () => {
-        mkdirSync(job, { recursive: true })
+        mkdirSync(dir, { recursive: true })
         try {
-          const src = join(job, `in.${ext}`)
+          const src = join(dir, `in.${ext}`)
           writeFileSync(src, input)
-          const produced = await run(src, ext, kind, job)
-          if (!existsSync(produced) || statSync(produced).size === 0) {
-            throw Object.assign(new Error(), { toolError: { kind: 'failed', message: `変換結果が作られませんでした (.${ext})` } })
-          }
-          renameSync(produced, outPath(hash, kind))
-          jobs.delete(key)
+          renameSync(await runChain(src, ext, chain.output, chain.converters, dir), out)
+          jobs.delete(out)
           pruneCache(cacheDir, CACHE_LIMITS)
         } catch (error) {
-          jobs.set(key, { state: 'error', error: toToolError(error) })
+          jobs.set(out, { state: 'error', error: toToolError(error) })
         } finally {
-          rmSync(job, { recursive: true, force: true })
+          rmSync(dir, { recursive: true, force: true })
         }
       }
       queue = queue.then(work, work)
+      return running
     }
 
-    orca.panels.handle('convert.lookup', async ({ hash, kind }) => state(hash, kind))
+    orca.panels.handle('convert.lookup', async (key) => state(key))
 
     orca.panels.handle('upload.begin', async ({ size }) => ({ id: uploads.begin(size) }))
 
@@ -136,32 +114,29 @@ export function createWorker(deps: WorkerDeps) {
       return { ok: true }
     })
 
-    orca.panels.handle('upload.finish', async ({ id, hash, ext, kind }) => {
+    orca.panels.handle('upload.finish', async ({ id, ...key }) => {
       try {
-        const e = String(ext).toLowerCase()
-        if (!canConvert(e, kind)) throw new BadRequest(`.${e} is not converted to ${kind}`)
+        resolve(key)
         const input = uploads.finish(id)
-        if (createHash('sha256').update(input).digest('hex') !== hash) throw new BadRequest('upload does not match its hash')
-        const now = state(hash, kind)
-        if (now.state === 'ready' || now.state === 'running') return now
-        start(input, hash, e, kind)
-        return { state: 'running' }
+        if (createHash('sha256').update(input).digest('hex') !== key.hash) throw new BadRequest('upload does not match its hash')
+        const now = state(key)
+        return now.state === 'ready' || now.state === 'running' ? now : start(input, key)
       } catch (error) {
         return { state: 'error', error: toToolError(error) }
       }
     })
 
-    orca.panels.handle('convert.read', async ({ hash, kind, offset }) => {
-      const p = outPath(hash, kind)
-      const size = statSync(p).size
+    orca.panels.handle('convert.read', async ({ offset, ...key }) => {
+      const { out } = resolve(key)
+      const size = statSync(out).size
       const begin = Math.max(0, Math.min(offset, size))
       if (begin === 0) {
         const now = new Date()
-        utimesSync(p, now, now) // pruning drops the least recently opened first
+        utimesSync(out, now, now) // pruning drops the least recently opened first
       }
       const len = Math.min(DOWNLOAD_CHUNK, size - begin)
       const buf = Buffer.alloc(len)
-      const fd = openSync(p, 'r')
+      const fd = openSync(out, 'r')
       try {
         readSync(fd, buf, 0, len, begin)
       } finally {
@@ -172,9 +147,20 @@ export function createWorker(deps: WorkerDeps) {
   }
 }
 
-import { macTools, runTool } from './exec'
+/** First installed candidate from formats.json (`~/` is home), when everything it `requires` exists. */
+export function locateFrom(spec: ConverterSpec | undefined): string | null {
+  if (!spec) return null
+  const expand = (p: string) => (p.startsWith('~/') ? join(homedir(), p.slice(2)) : p)
+  if ((spec.requires ?? []).some((p) => !existsSync(expand(p)))) return null
+  return spec.candidates.map(expand).find((p) => existsSync(p)) ?? null
+}
+
+import { runTool } from './exec'
+const registry = createRegistry(JSON.parse(readFileSync(new URL('../formats.json', import.meta.url), 'utf8')))
 export default createWorker({
+  registry,
   exec: runTool,
   cacheDir: join(homedir(), 'Library', 'Caches', 'orca-convert-viewer'),
-  tools: macTools
+  locate: (id) => locateFrom(registry.file.converters[id]),
+  loadConverter: async (id) => (await import(`./converters/${id}.ts`)).default as Converter
 })

@@ -2,43 +2,7 @@ import { mkdtempSync, readdirSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { assert, test } from 'orca/testing'
-import { Uploads, blenderArgs, ffmpegArgs, keynoteArgs, pruneCache, sipsArgs, sofficeArgs } from './convert'
-
-test('sofficeArgs uses its own profile and converts to pdf', () => {
-  assert.deepEqual(sofficeArgs('/in/a.doc', '/out', '/c/lo-profile'), [
-    '-env:UserInstallation=file:///c/lo-profile',
-    '--headless',
-    '--norestore',
-    '--convert-to',
-    'pdf',
-    '--outdir',
-    '/out',
-    '/in/a.doc'
-  ])
-})
-
-test('blenderArgs opens a .blend directly and imports anything else', () => {
-  assert.deepEqual(blenderArgs('/in/a.blend', '/out/a.glb', '/c/x.py'), [
-    '-b', '--factory-startup', '/in/a.blend', '--python', '/c/x.py', '--', '/in/a.blend', '/out/a.glb'
-  ])
-  assert.deepEqual(blenderArgs('/in/a.stl', '/out/a.glb', '/c/x.py'), [
-    '-b', '--factory-startup', '--python', '/c/x.py', '--', '/in/a.stl', '/out/a.glb'
-  ])
-})
-
-test('sipsArgs and ffmpegArgs write png and web-playable mp4', () => {
-  assert.deepEqual(sipsArgs('/in/a.heic', '/out/a.png'), ['-s', 'format', 'png', '/in/a.heic', '--out', '/out/a.png'])
-  const f = ffmpegArgs('/in/a.avi', '/out/a.mp4')
-  assert.equal(f[f.indexOf('-i') + 1], '/in/a.avi')
-  assert.equal(f[f.length - 1], '/out/a.mp4')
-  assert.ok(f.includes('libx264') && f.includes('aac') && f.includes('+faststart'))
-})
-
-test('keynoteArgs passes the paths as osascript arguments, not inside the script', () => {
-  const a = keynoteArgs('/in/a "x".key', '/out/a.pdf')
-  assert.deepEqual(a.slice(-2), ['/in/a "x".key', '/out/a.pdf'])
-  assert.ok(!a.slice(0, -2).join('\n').includes('/in/'))
-})
+import { Uploads, pruneCache } from './convert'
 
 const b64 = (s: string) => Buffer.from(s).toString('base64')
 

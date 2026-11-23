@@ -1,7 +1,7 @@
 // Moves file bytes from the editor frame to the worker and the converted file back. Requests carry
 // JSON only (inputs ≤ 64 KiB, answers ≤ 1 MiB), so bytes travel as base64 chunks.
-import type { OutKind } from '../src/formats'
 import type { JobState, ToolError } from '../src/protocol'
+import type { Stage } from '../src/registry'
 
 type ToolErrorKind = ToolError['kind']
 
@@ -56,17 +56,18 @@ export function retrying(request: RequestFn, maxRetries = 600): RequestFn {
 
 const POLL_MS = 400
 
-/** Converts `bytes` (a file ending in `ext`) to `kind` through the worker and returns the result. */
+/** Runs `stage` of the file's format (formats.json) on `bytes` through the worker; resolves with the output. */
 export async function convertBytes(
   bytes: ArrayBuffer,
   ext: string,
-  kind: OutKind,
+  stage: Stage,
   request: RequestFn,
-  onProgress?: (phase: Phase, ratio: number) => void
+  onProgress?: (phase: Phase, ratio: number, label?: string) => void
 ): Promise<Uint8Array> {
   request = retrying(request)
   const hash = await sha256Hex(bytes)
-  let job: JobState = await request('convert.lookup', { hash, kind })
+  const key = { hash, ext, stage }
+  let job: JobState = await request('convert.lookup', key)
 
   if (job.state === 'missing' || job.state === 'error') {
     const src = new Uint8Array(bytes)
@@ -82,13 +83,13 @@ export async function convertBytes(
       }
     }
     await Promise.all(Array.from({ length: PARALLEL }, lane))
-    job = await request('upload.finish', { id, hash, ext, kind })
+    job = await request('upload.finish', { ...key, id })
   }
 
-  if (job.state === 'running') onProgress?.('convert', 0)
+  if (job.state === 'running') onProgress?.('convert', 0, job.label)
   while (job.state === 'running') {
     await sleep(POLL_MS)
-    job = await request('convert.lookup', { hash, kind })
+    job = await request('convert.lookup', key)
   }
   if (job.state === 'error') throw new ConvertError(job.error.kind, job.error.message)
   if (job.state !== 'ready') throw new ConvertError('failed', 'conversion vanished')
@@ -97,7 +98,7 @@ export async function convertBytes(
   const data = new Uint8Array(size)
   let offset = 0
   for (;;) {
-    const { b64, eof } = await request('convert.read', { hash, kind, offset })
+    const { b64, eof } = await request('convert.read', { ...key, offset })
     const part = fromBase64(b64)
     data.set(part, offset)
     offset += part.length

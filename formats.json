@@ -1,0 +1,201 @@
+{
+  "$comment": "Which files this plugin opens and how. Only formats nothing else in Orca shows: Orca's own viewers and the installed plugins already cover the rest. formats[].viewer names editor/viewers/<viewer>.ts; convert/fallback name converters (their code is src/converters/<id>.ts). After editing, run: node --experimental-strip-types scripts/gen.ts (rewrites the manifest's editors and the entries).",
+  "converters": {
+    "libreoffice": {
+      "label": "LibreOffice",
+      "output": "pdf",
+      "candidates": [
+        "/Applications/LibreOffice.app/Contents/MacOS/soffice",
+        "/opt/homebrew/bin/soffice",
+        "/usr/local/bin/soffice"
+      ],
+      "missing": "LibreOffice が見つかりません。`brew install --cask libreoffice` で入れてください。"
+    },
+    "blender": {
+      "label": "Blender",
+      "output": "glb",
+      "candidates": [
+        "/Applications/Blender.app/Contents/MacOS/Blender",
+        "/opt/homebrew/bin/blender"
+      ],
+      "missing": "Blender が見つかりません。/Applications に Blender を入れてください。"
+    },
+    "sips": {
+      "label": "sips",
+      "output": "png",
+      "candidates": [
+        "/usr/bin/sips"
+      ],
+      "missing": "sips が見つかりません（macOS 標準のツールです）。"
+    },
+    "ffmpeg": {
+      "label": "ffmpeg",
+      "output": "mp4",
+      "candidates": [
+        "~/.nix-profile/bin/ffmpeg",
+        "/run/current-system/sw/bin/ffmpeg",
+        "/opt/homebrew/bin/ffmpeg",
+        "/usr/local/bin/ffmpeg"
+      ],
+      "missing": "ffmpeg が見つかりません。`brew install ffmpeg` で入れてください。"
+    }
+  },
+  "formats": [
+    {
+      "id": "office-legacy",
+      "title": "Document",
+      "extensions": [
+        "doc",
+        "dot",
+        "ppt",
+        "pps",
+        "pot",
+        "odt",
+        "ott",
+        "odp",
+        "otp",
+        "odg",
+        "otg",
+        "vsd",
+        "vsdx",
+        "pub",
+        "wpd",
+        "wps",
+        "pages",
+        "numbers"
+      ],
+      "content": "bytes",
+      "priority": "default",
+      "viewer": "pdf",
+      "convert": [
+        "libreoffice"
+      ]
+    },
+    {
+      "id": "blender",
+      "title": "3D",
+      "extensions": [
+        "blend",
+        "abc"
+      ],
+      "content": "bytes",
+      "priority": "default",
+      "viewer": "model",
+      "convert": [
+        "blender"
+      ]
+    },
+    {
+      "id": "jpeg2000",
+      "title": "Image",
+      "extensions": [
+        "jp2"
+      ],
+      "content": "bytes",
+      "priority": "default",
+      "viewer": "image",
+      "convert": [
+        "sips"
+      ]
+    },
+    {
+      "id": "video-legacy",
+      "title": "Player",
+      "extensions": [
+        "wmv",
+        "flv",
+        "mpg",
+        "mpeg",
+        "3gp",
+        "mts",
+        "m2ts",
+        "vob"
+      ],
+      "content": "bytes",
+      "priority": "default",
+      "viewer": "media",
+      "convert": [
+        "ffmpeg"
+      ],
+      "options": {
+        "kind": "video"
+      }
+    },
+    {
+      "id": "audio-legacy",
+      "title": "Player",
+      "extensions": [
+        "aiff",
+        "aif",
+        "caf",
+        "wma",
+        "amr"
+      ],
+      "content": "bytes",
+      "priority": "default",
+      "viewer": "media",
+      "convert": [
+        "ffmpeg"
+      ],
+      "options": {
+        "kind": "audio"
+      }
+    },
+    {
+      "id": "json",
+      "title": "Tree",
+      "extensions": [
+        "json",
+        "jsonc",
+        "geojson"
+      ],
+      "content": "text",
+      "priority": "option",
+      "viewer": "tree",
+      "options": {
+        "parser": "json"
+      }
+    },
+    {
+      "id": "yaml",
+      "title": "Tree",
+      "extensions": [
+        "yaml",
+        "yml"
+      ],
+      "content": "text",
+      "priority": "option",
+      "viewer": "tree",
+      "options": {
+        "parser": "yaml"
+      }
+    },
+    {
+      "id": "toml",
+      "title": "Tree",
+      "extensions": [
+        "toml"
+      ],
+      "content": "text",
+      "priority": "option",
+      "viewer": "tree",
+      "options": {
+        "parser": "toml"
+      }
+    },
+    {
+      "id": "xml",
+      "title": "Tree",
+      "extensions": [
+        "xml",
+        "plist"
+      ],
+      "content": "text",
+      "priority": "option",
+      "viewer": "tree",
+      "options": {
+        "parser": "xml"
+      }
+    }
+  ]
+}

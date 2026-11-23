@@ -2,20 +2,24 @@ import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { assert, mockHost, mountWorker, test } from 'orca/testing'
-import { createWorker, type ExecFn } from '../src/worker'
+import { readFileSync } from 'node:fs'
+import type { Converter } from '../src/converters/types'
+import { createRegistry } from '../src/registry'
+import { createWorker } from '../src/worker'
 import { ConvertError, convertBytes, type RequestFn } from './transfer'
 
-const none = () => null
+const registry = createRegistry(JSON.parse(readFileSync(new URL('../formats.json', import.meta.url), 'utf8')))
 
 async function setup(pdf: Buffer | null) {
-  const exec: ExecFn = async (_cmd, args) => {
-    const outDir = args[args.indexOf('--outdir') + 1]
-    if (pdf) writeFileSync(join(outDir, 'in.pdf'), pdf)
-    return { stdout: '' }
-  }
+  const loadConverter = async (): Promise<Converter> => ({
+    async run(job) {
+      if (pdf) writeFileSync(job.out, pdf)
+      return job.out
+    }
+  })
   const cacheDir = mkdtempSync(join(tmpdir(), 'cv-tr-'))
   const worker = await mountWorker(
-    { default: createWorker({ exec, cacheDir, tools: { soffice: () => '/bin/soffice', blender: none, ffmpeg: none, sips: none, keynote: none } }) },
+    { default: createWorker({ registry, exec: async () => ({ stdout: '' }), cacheDir, locate: () => '/bin/tool', loadConverter }) },
     { host: mockHost({}) }
   )
   const methods: string[] = []
@@ -33,13 +37,13 @@ test('a 200 KB document uploads in chunks, converts, and downloads intact', asyn
   const { worker, request, methods } = await setup(pdf)
   const input = new Uint8Array(200_000).map((_, i) => i % 251)
   const phases = new Set<string>()
-  const out = await convertBytes(input.buffer, 'doc', 'pdf', request, (p) => phases.add(p))
+  const out = await convertBytes(input.buffer, 'doc', 'convert', request, (p) => phases.add(p))
   assert.ok(Buffer.from(out).equals(pdf))
   assert.ok(methods.filter((m) => m === 'upload.chunk').length >= 5)
   assert.deepEqual([...phases], ['upload', 'convert', 'download'])
 
   methods.length = 0
-  await convertBytes(input.buffer, 'doc', 'pdf', request)
+  await convertBytes(input.buffer, 'doc', 'convert', request)
   assert.ok(!methods.some((m) => m.startsWith('upload.')), 'second open is a cache hit')
   await worker.deactivate()
 })
@@ -48,7 +52,7 @@ test('a conversion error surfaces as ConvertError', async () => {
   const { worker, request } = await setup(null)
   let caught: unknown
   try {
-    await convertBytes(new Uint8Array([1, 2, 3]).buffer, 'doc', 'pdf', request)
+    await convertBytes(new Uint8Array([1, 2, 3]).buffer, 'doc', 'convert', request)
   } catch (e) {
     caught = e
   }
@@ -67,7 +71,7 @@ test('rate_limited calls wait retryAfterMs and retry', async () => {
     }
     return request(method, input, opts)
   }
-  const out = await convertBytes(new Uint8Array(100_000).buffer, 'doc', 'pdf', flaky)
+  const out = await convertBytes(new Uint8Array(100_000).buffer, 'doc', 'convert', flaky)
   assert.equal(limited, 3)
   assert.equal(Buffer.from(out).toString(), '%PDF')
   await worker.deactivate()

@@ -1,0 +1,57 @@
+/* Styles for every viewer. Colors come only from Orca's --orca-* variables (they follow the theme). */
+html, body { margin: 0; height: 100%; background: var(--orca-background); color: var(--orca-foreground);
+  font: 13px var(--orca-font-sans, system-ui, sans-serif); }
+#app { display: flex; flex-direction: column; height: 100vh; }
+.bar { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-bottom: 1px solid var(--orca-border); flex: none; min-height: 22px; }
+.spacer { flex: 1; }
+.muted { color: var(--orca-muted-foreground); }
+.zoom { min-width: 44px; text-align: center; font-variant-numeric: tabular-nums; }
+.bar button { font: inherit; color: var(--orca-foreground); background: var(--orca-card); border: 1px solid var(--orca-border);
+  border-radius: var(--orca-radius, 6px); padding: 2px 9px; cursor: pointer; }
+.bar button:hover { border-color: var(--orca-ring); }
+.bar button:focus-visible, .sample-input:focus-visible { outline: 2px solid var(--orca-ring); outline-offset: 1px; }
+.sample-input { font: inherit; color: var(--orca-foreground); background: var(--orca-card); border: 1px solid var(--orca-border);
+  border-radius: var(--orca-radius, 6px); padding: 3px 8px; min-width: 0; width: min(420px, 50vw); }
+
+/* Status and errors */
+.status { margin: auto; text-align: center; max-width: 420px; padding: 24px; }
+.status .title { font-size: 14px; margin-bottom: 10px; }
+.status .detail { color: var(--orca-muted-foreground); white-space: pre-wrap; word-break: break-word; font-size: 12px; text-align: left; }
+.progress { height: 4px; background: var(--orca-muted); border-radius: 2px; overflow: hidden; margin: 10px auto 0; width: 220px; }
+.progress > div { height: 100%; width: 0; background: var(--orca-ring); transition: width .15s; }
+.error .title { color: var(--orca-destructive); }
+
+/* pdf */
+.scroller { flex: 1; overflow: auto; padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.page { background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.35); flex: none; }
+.page canvas { display: block; }
+
+/* model */
+.stage { flex: 1; min-height: 0; position: relative; }
+.stage canvas { display: block; }
+
+/* image */
+.checker { background-color: var(--orca-card);
+  background-image: linear-gradient(45deg, rgba(128,128,128,.18) 25%, transparent 25%), linear-gradient(-45deg, rgba(128,128,128,.18) 25%, transparent 25%),
+  linear-gradient(45deg, transparent 75%, rgba(128,128,128,.18) 75%), linear-gradient(-45deg, transparent 75%, rgba(128,128,128,.18) 75%);
+  background-size: 16px 16px; background-position: 0 0, 0 8px, 8px -8px, -8px 0; }
+.image-stage { flex: 1; overflow: auto; display: grid; place-items: center; }
+.image-stage img { display: block; cursor: zoom-in; }
+.image-stage.fit { overflow: hidden; padding: 8px; box-sizing: border-box; }
+.image-stage.fit img { max-width: 100%; max-height: 100%; object-fit: contain; cursor: zoom-out; }
+
+/* media */
+.media-stage { flex: 1; min-height: 0; display: grid; place-items: center; background: #000; }
+.media-stage video { max-width: 100%; max-height: 100%; }
+.media-stage.audio { background: var(--orca-background); }
+.media-stage.audio audio { width: min(560px, 90%); }
+
+/* tree */
+.tree { flex: 1; overflow: auto; padding: 6px 0; font: 12.5px var(--orca-font-mono, ui-monospace, monospace); }
+.tree-row { white-space: nowrap; padding: 1px 8px; line-height: 20px; }
+.tree-row.branch { cursor: pointer; }
+.tree-row:hover { background: var(--orca-muted); }
+.caret { display: inline-block; width: 14px; color: var(--orca-muted-foreground); }
+.tree-key { color: var(--orca-foreground); font-weight: 600; }
+.t-string { color: #3fb950; } .t-number { color: #79c0ff; } .t-boolean { color: #d2a8ff; } .t-null { color: var(--orca-muted-foreground); }
+html.light .t-string { color: #116329; } html.light .t-number { color: #0550ae; } html.light .t-boolean { color: #8250df; }

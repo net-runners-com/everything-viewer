@@ -1,75 +1,8 @@
-// Pure-ish pieces of the conversion pipeline: exact command lines per converter, reassembly of the
-// base64 chunks the editor frame uploads (requests are capped at 64 KiB), and cache pruning.
+// Upload reassembly (the editor frame sends base64 chunks: requests are capped at 64 KiB) and
+// cache pruning.
 import { randomUUID } from 'node:crypto'
 import { readdirSync, rmSync, statSync } from 'node:fs'
 import { join } from 'node:path'
-
-export type { OutKind } from './formats'
-
-/** A private profile keeps a LibreOffice window the user has open from blocking the conversion. */
-export function sofficeArgs(input: string, outDir: string, profileDir: string): string[] {
-  return [`-env:UserInstallation=file://${profileDir}`, '--headless', '--norestore', '--convert-to', 'pdf', '--outdir', outDir, input]
-}
-
-/** A .blend opens as the scene; anything else is imported into an empty one by the script. */
-export function blenderArgs(input: string, out: string, script: string): string[] {
-  const open = input.toLowerCase().endsWith('.blend') ? [input] : []
-  return ['-b', '--factory-startup', ...open, '--python', script, '--', input, out]
-}
-
-export const BLENDER_EXPORT_PY = `import bpy, sys
-src, out = sys.argv[-2], sys.argv[-1]
-ext = src.rsplit('.', 1)[-1].lower()
-if ext != 'blend':
-    bpy.ops.wm.read_factory_settings(use_empty=True)
-    if ext == 'stl':
-        bpy.ops.wm.stl_import(filepath=src)
-    elif ext == 'obj':
-        bpy.ops.wm.obj_import(filepath=src)
-    elif ext == 'fbx':
-        bpy.ops.import_scene.fbx(filepath=src)
-    elif ext == 'ply':
-        bpy.ops.wm.ply_import(filepath=src)
-    elif ext in ('usd', 'usdz', 'usdc', 'usda'):
-        bpy.ops.wm.usd_import(filepath=src)
-    elif ext == 'abc':
-        bpy.ops.wm.alembic_import(filepath=src)
-    else:
-        raise SystemExit('unsupported ' + ext)
-bpy.ops.export_scene.gltf(filepath=out, export_format='GLB', export_apply=True)
-`
-
-export function sipsArgs(input: string, out: string): string[] {
-  return ['-s', 'format', 'png', input, '--out', out]
-}
-
-/** H.264 + AAC in a faststart MP4 plays in every Chromium; even dimensions keep libx264 happy. */
-export function ffmpegArgs(input: string, out: string): string[] {
-  return [
-    '-hide_banner', '-loglevel', 'error', '-y', '-i', input,
-    '-map', '0:v:0?', '-map', '0:a:0?',
-    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-pix_fmt', 'yuv420p',
-    '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
-    '-c:a', 'aac', '-b:a', '160k', '-movflags', '+faststart', out
-  ]
-}
-
-const KEYNOTE_SCRIPT = [
-  'on run argv',
-  'set wasRunning to application "Keynote" is running',
-  'tell application "Keynote"',
-  'set d to open (POSIX file (item 1 of argv))',
-  'export d to (POSIX file (item 2 of argv)) as PDF',
-  'close d saving no',
-  'if not wasRunning then quit',
-  'end tell',
-  'end run'
-]
-
-/** Keynote exports its own files faithfully; LibreOffice renders them blank. */
-export function keynoteArgs(input: string, out: string): string[] {
-  return [...KEYNOTE_SCRIPT.flatMap((line) => ['-e', line]), input, out]
-}
 
 const IDLE_MS = 10 * 60_000
 type Pending = { size: number; buf: Buffer; chunks: Map<number, number>; touched: number }

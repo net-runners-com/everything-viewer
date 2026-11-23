@@ -1,52 +1,5 @@
-// Small, dependency-free parsers for the text views: CSV/TSV rows, JSON with comments, a tree model
-// of any JSON-like value, and XML to a JSON-like value. Pure so they run in Node tests.
-
-export function parseCsv(text: string, delimiter: string): string[][] {
-  const rows: string[][] = []
-  let row: string[] = []
-  let field = ''
-  let quoted = false
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i]
-    if (quoted) {
-      if (c === '"') {
-        if (text[i + 1] === '"') {
-          field += '"'
-          i++
-        } else quoted = false
-      } else field += c
-    } else if (c === '"' && field === '') quoted = true
-    else if (c === delimiter) {
-      row.push(field)
-      field = ''
-    } else if (c === '\n' || c === '\r') {
-      if (c === '\r' && text[i + 1] === '\n') i++
-      row.push(field)
-      rows.push(row)
-      row = []
-      field = ''
-    } else field += c
-  }
-  if (field !== '' || row.length) {
-    row.push(field)
-    rows.push(row)
-  }
-  return rows
-}
-
-export function sniffDelimiter(text: string): string {
-  const first = text.split(/\r?\n/, 1)[0] ?? ''
-  let best = ','
-  let most = 0
-  for (const d of [',', '\t', ';', '|']) {
-    const n = first.split(d).length
-    if (n > most) {
-      most = n
-      best = d
-    }
-  }
-  return best
-}
+// Small, dependency-free parsers for the tree view: JSON with comments, XML to a JSON-like value,
+// and the tree model of any JSON-like value. Pure so they run in Node tests.
 
 /** JSONC → JSON: drops comments and trailing commas, leaving string contents alone. */
 export function stripJsonComments(src: string): string {

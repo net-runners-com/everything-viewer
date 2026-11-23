@@ -1,27 +1,5 @@
 import { assert, test } from 'orca/testing'
-import { parseCsv, sniffDelimiter, stripJsonComments, toTree, xmlToValue } from './parse'
-
-test('parseCsv handles quotes, escaped quotes, embedded newlines and CRLF', () => {
-  const rows = parseCsv('a,b,c\r\n1,"x, y","say ""hi"""\n2,"multi\nline",\n', ',')
-  assert.deepEqual(rows, [
-    ['a', 'b', 'c'],
-    ['1', 'x, y', 'say "hi"'],
-    ['2', 'multi\nline', '']
-  ])
-})
-
-test('parseCsv reads tab-separated text and a missing final newline', () => {
-  assert.deepEqual(parseCsv('a\tb\n1\t2', '\t'), [
-    ['a', 'b'],
-    ['1', '2']
-  ])
-})
-
-test('sniffDelimiter picks the separator that splits the first line most', () => {
-  assert.equal(sniffDelimiter('a;b;c\n1;2;3'), ';')
-  assert.equal(sniffDelimiter('a,b\n1,2'), ',')
-  assert.equal(sniffDelimiter('a\tb\tc'), '\t')
-})
+import { stripJsonComments, toTree, xmlToValue } from './parse'
 
 test('stripJsonComments removes // and /* */ outside strings and trailing commas', () => {
   const src = '{\n  // note\n  "url": "http://x/*y*/", /* block */\n  "a": [1, 2,],\n}'

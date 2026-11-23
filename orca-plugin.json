@@ -13,7 +13,55 @@
   "contributes": {
     "customEditors": [
       {
-        "id": "bytes-default-1",
+        "id": "json",
+        "title": "Tree",
+        "extensions": [
+          ".json",
+          ".jsonc",
+          ".geojson"
+        ],
+        "entry": "editor/entries/json.ts",
+        "frame": "isolated",
+        "contentKind": "text",
+        "priority": "option"
+      },
+      {
+        "id": "yaml",
+        "title": "Tree",
+        "extensions": [
+          ".yaml",
+          ".yml"
+        ],
+        "entry": "editor/entries/yaml.ts",
+        "frame": "isolated",
+        "contentKind": "text",
+        "priority": "option"
+      },
+      {
+        "id": "toml",
+        "title": "Tree",
+        "extensions": [
+          ".toml"
+        ],
+        "entry": "editor/entries/toml.ts",
+        "frame": "isolated",
+        "contentKind": "text",
+        "priority": "option"
+      },
+      {
+        "id": "xml",
+        "title": "Tree",
+        "extensions": [
+          ".xml",
+          ".plist"
+        ],
+        "entry": "editor/entries/xml.ts",
+        "frame": "isolated",
+        "contentKind": "text",
+        "priority": "option"
+      },
+      {
+        "id": "files-default-1",
         "title": "Viewer",
         "extensions": [
           ".doc",
@@ -32,7 +80,6 @@
           ".pub",
           ".wpd",
           ".wps",
-          ".key",
           ".pages",
           ".numbers",
           ".blend",
@@ -47,129 +94,25 @@
           ".m2ts",
           ".vob",
           ".aiff",
-          ".aif"
+          ".aif",
+          ".caf"
         ],
-        "entry": "editor/main.ts",
+        "entry": "editor/entries/files.ts",
         "frame": "isolated",
         "contentKind": "bytes",
         "priority": "default"
       },
       {
-        "id": "bytes-default-2",
+        "id": "files-default-2",
         "title": "Viewer",
         "extensions": [
-          ".caf",
           ".wma",
           ".amr"
         ],
-        "entry": "editor/main.ts",
+        "entry": "editor/entries/files.ts",
         "frame": "isolated",
         "contentKind": "bytes",
         "priority": "default"
-      },
-      {
-        "id": "bytes-option-1",
-        "title": "Viewer",
-        "extensions": [
-          ".docx",
-          ".docm",
-          ".dotx",
-          ".xlsx",
-          ".xlsm",
-          ".xlsb",
-          ".xls",
-          ".ods",
-          ".pptx",
-          ".pptm",
-          ".ppsx",
-          ".potx",
-          ".pdf",
-          ".stl",
-          ".obj",
-          ".fbx",
-          ".ply",
-          ".usd",
-          ".usdz",
-          ".usdc",
-          ".usda",
-          ".glb",
-          ".png",
-          ".jpg",
-          ".jpeg",
-          ".gif",
-          ".webp",
-          ".avif",
-          ".bmp",
-          ".ico",
-          ".apng",
-          ".tif"
-        ],
-        "entry": "editor/main.ts",
-        "frame": "isolated",
-        "contentKind": "bytes",
-        "priority": "option"
-      },
-      {
-        "id": "bytes-option-2",
-        "title": "Viewer",
-        "extensions": [
-          ".tiff",
-          ".heic",
-          ".heif",
-          ".psd",
-          ".mp4",
-          ".m4v",
-          ".mov",
-          ".webm",
-          ".ogv",
-          ".mp3",
-          ".wav",
-          ".m4a",
-          ".aac",
-          ".ogg",
-          ".oga",
-          ".flac",
-          ".opus",
-          ".weba",
-          ".mkv",
-          ".avi",
-          ".ttf",
-          ".otf",
-          ".woff",
-          ".woff2"
-        ],
-        "entry": "editor/main.ts",
-        "frame": "isolated",
-        "contentKind": "bytes",
-        "priority": "option"
-      },
-      {
-        "id": "text-option-1",
-        "title": "Preview",
-        "extensions": [
-          ".md",
-          ".markdown",
-          ".mdx",
-          ".html",
-          ".htm",
-          ".xhtml",
-          ".json",
-          ".jsonc",
-          ".geojson",
-          ".yaml",
-          ".yml",
-          ".toml",
-          ".xml",
-          ".plist",
-          ".csv",
-          ".tsv",
-          ".svg",
-          ".ipynb"
-        ],
-        "entry": "editor/main.ts",
-        "frame": "isolated",
-        "contentKind": "text",
-        "priority": "option"
       }
     ]
   }
