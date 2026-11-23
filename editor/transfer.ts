@@ -38,12 +38,30 @@ export function fromBase64(b64: string): Uint8Array {
   return out
 }
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+/** Orca budgets frame→worker requests; a `rate_limited` call says when to try again. */
+export function retrying(request: RequestFn, maxRetries = 600): RequestFn {
+  return async (method, input, opts) => {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await request(method, input, opts)
+      } catch (error) {
+        const e = error as { code?: string; retryAfterMs?: number }
+        if (e?.code !== 'rate_limited' || attempt >= maxRetries) throw error
+        await sleep(Math.max(20, e.retryAfterMs ?? 250))
+      }
+    }
+  }
+}
+
 export async function convertBytes(
   bytes: ArrayBuffer,
   ext: string,
   request: RequestFn,
   onProgress?: (phase: Phase, ratio: number) => void
 ): Promise<{ kind: OutKind; data: Uint8Array }> {
+  request = retrying(request)
   const kind = kindForExt(ext)
   const hash = await sha256Hex(bytes)
   let found = await request('convert.lookup', { hash, kind })

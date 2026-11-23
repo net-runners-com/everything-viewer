@@ -55,3 +55,19 @@ test('a conversion error surfaces as ConvertError', async () => {
   assert.equal((caught as ConvertError).kind, 'failed')
   await worker.deactivate()
 })
+
+test('rate_limited calls wait retryAfterMs and retry', async () => {
+  const { worker, request } = await setup(Buffer.from('%PDF'))
+  let limited = 0
+  const flaky: RequestFn = (method, input, opts) => {
+    if (method === 'upload.chunk' && limited < 3) {
+      limited++
+      return Promise.reject(Object.assign(new Error('Too many requests.'), { code: 'rate_limited', retryAfterMs: 5 }))
+    }
+    return request(method, input, opts)
+  }
+  const out = await convertBytes(new Uint8Array(100_000).buffer, 'doc', flaky)
+  assert.equal(limited, 3)
+  assert.equal(Buffer.from(out.data).toString(), '%PDF')
+  await worker.deactivate()
+})
