@@ -1,6 +1,9 @@
 // Moves file bytes from the editor frame to the worker and the converted file back. Requests carry
 // JSON only (inputs ≤ 64 KiB, answers ≤ 1 MiB), so bytes travel as base64 chunks.
-import type { OutKind, ToolErrorKind } from './types'
+import type { OutKind } from '../src/formats'
+import type { JobState, ToolError } from '../src/protocol'
+
+type ToolErrorKind = ToolError['kind']
 
 export type RequestFn = (method: string, input: unknown, opts?: { timeoutMs?: number }) => Promise<any>
 export type Phase = 'upload' | 'convert' | 'download'
@@ -14,10 +17,6 @@ export class ConvertError extends Error {
     super(message)
     this.kind = kind
   }
-}
-
-export function kindForExt(ext: string): OutKind {
-  return ext.toLowerCase() === 'blend' ? 'glb' : 'pdf'
 }
 
 export async function sha256Hex(bytes: ArrayBuffer): Promise<string> {
@@ -55,18 +54,21 @@ export function retrying(request: RequestFn, maxRetries = 600): RequestFn {
   }
 }
 
+const POLL_MS = 400
+
+/** Converts `bytes` (a file ending in `ext`) to `kind` through the worker and returns the result. */
 export async function convertBytes(
   bytes: ArrayBuffer,
   ext: string,
+  kind: OutKind,
   request: RequestFn,
   onProgress?: (phase: Phase, ratio: number) => void
-): Promise<{ kind: OutKind; data: Uint8Array }> {
+): Promise<Uint8Array> {
   request = retrying(request)
-  const kind = kindForExt(ext)
   const hash = await sha256Hex(bytes)
-  let found = await request('convert.lookup', { hash, kind })
+  let job: JobState = await request('convert.lookup', { hash, kind })
 
-  if (!found.ready) {
+  if (job.state === 'missing' || job.state === 'error') {
     const src = new Uint8Array(bytes)
     const { id } = await request('upload.begin', { size: src.length })
     const offsets: number[] = []
@@ -80,12 +82,18 @@ export async function convertBytes(
       }
     }
     await Promise.all(Array.from({ length: PARALLEL }, lane))
-    onProgress?.('convert', 0)
-    found = await request('upload.finish', { id, hash, ext }, { timeoutMs: 120_000 })
-    if ('error' in found) throw new ConvertError(found.error.kind, found.error.message)
+    job = await request('upload.finish', { id, hash, ext, kind })
   }
 
-  const size: number = found.size
+  if (job.state === 'running') onProgress?.('convert', 0)
+  while (job.state === 'running') {
+    await sleep(POLL_MS)
+    job = await request('convert.lookup', { hash, kind })
+  }
+  if (job.state === 'error') throw new ConvertError(job.error.kind, job.error.message)
+  if (job.state !== 'ready') throw new ConvertError('failed', 'conversion vanished')
+
+  const size = job.size
   const data = new Uint8Array(size)
   let offset = 0
   for (;;) {
@@ -96,5 +104,5 @@ export async function convertBytes(
     onProgress?.('download', size ? offset / size : 1)
     if (eof || part.length === 0) break
   }
-  return { kind, data }
+  return data
 }

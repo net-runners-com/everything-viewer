@@ -1,6 +1,8 @@
 // The only place that touches the OS: runs converters and finds them on this Mac.
 import { execFile } from 'node:child_process'
 import { existsSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
 import type { ToolError } from './protocol'
 import type { ExecFn, Tools } from './worker'
 
@@ -39,5 +41,14 @@ export const macTools: Tools = {
     '/opt/homebrew/bin/soffice',
     '/usr/local/bin/soffice'
   ]),
-  blender: first(['/Applications/Blender.app/Contents/MacOS/Blender', '/opt/homebrew/bin/blender'])
+  blender: first(['/Applications/Blender.app/Contents/MacOS/Blender', '/opt/homebrew/bin/blender']),
+  ffmpeg: first([
+    join(homedir(), '.nix-profile/bin/ffmpeg'),
+    '/run/current-system/sw/bin/ffmpeg',
+    '/opt/homebrew/bin/ffmpeg',
+    '/usr/local/bin/ffmpeg'
+  ]),
+  sips: first(['/usr/bin/sips']),
+  // Keynote is driven through osascript; the first run asks for Automation permission.
+  keynote: () => (existsSync('/Applications/Keynote.app') && existsSync('/usr/bin/osascript') ? '/usr/bin/osascript' : null)
 }
