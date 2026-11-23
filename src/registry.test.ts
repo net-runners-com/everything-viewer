@@ -53,5 +53,9 @@ test('editorsFor gives each text format its own entry and shares the bytes ones'
   assert.deepEqual([yaml.entry, yaml.contentKind], ['editor/entries/yaml.ts', 'text'])
   const doc = editors.find((e) => e.extensions.includes('.doc'))!
   assert.deepEqual([doc.entry, doc.priority], ['editor/entries/files.ts', 'default'])
-  for (const e of editors) assert.ok(e.extensions.length <= 32)
+  for (const e of editors) {
+    assert.ok(e.extensions.length <= 32)
+    // A catalog lists each editor's suffixes as one detail line of at most 160 characters.
+    assert.ok(e.extensions.join(', ').length <= 160, `${e.id}: ${e.extensions.join(', ').length} characters`)
+  }
 })

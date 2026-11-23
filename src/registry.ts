@@ -85,9 +85,26 @@ export type EditorContribution = {
   priority: 'default' | 'option'
 }
 
-/** Orca allows at most 16 custom editors per plugin and 32 suffixes per editor. */
+/** Orca allows at most 16 custom editors per plugin and 32 suffixes per editor; a catalog lists
+ *  each editor's suffixes as one detail line of at most 160 characters. */
 export const MAX_EDITORS = 16
 const MAX_SUFFIXES = 32
+const MAX_DETAIL = 160
+
+/** Splits suffixes into runs that fit one editor (count and catalog detail length). */
+function chunkSuffixes(exts: string[]): string[][] {
+  const runs: string[][] = []
+  let run: string[] = []
+  for (const ext of exts) {
+    const next = [...run, `.${ext}`]
+    if (run.length && (next.length > MAX_SUFFIXES || next.join(', ').length > MAX_DETAIL)) {
+      runs.push(run)
+      run = [`.${ext}`]
+    } else run = next
+  }
+  if (run.length) runs.push(run)
+  return runs
+}
 
 /** The manifest's editors for formats.json. Text documents carry no file name, so each text format
  *  gets its own editor whose entry names it; bytes documents name their suffix (`fileType`), so
@@ -109,17 +126,17 @@ export function editorsFor(file: FormatsFile): EditorContribution[] {
     } else shared.set(f.priority, [...(shared.get(f.priority) ?? []), ...f.extensions])
   }
   for (const [priority, exts] of shared) {
-    for (let i = 0; i < exts.length; i += MAX_SUFFIXES) {
+    chunkSuffixes(exts).forEach((extensions, i) => {
       editors.push({
-        id: `files-${priority}-${i / MAX_SUFFIXES + 1}`,
+        id: `files-${priority}-${i + 1}`,
         title: 'Viewer',
-        extensions: exts.slice(i, i + MAX_SUFFIXES).map((e) => `.${e}`),
+        extensions,
         entry: 'editor/entries/files.ts',
         frame: 'isolated',
         contentKind: 'bytes',
         priority: priority as EditorContribution['priority']
       })
-    }
+    })
   }
   if (editors.length > MAX_EDITORS) throw new Error(`${editors.length} editors: Orca allows ${MAX_EDITORS}`)
   return editors
