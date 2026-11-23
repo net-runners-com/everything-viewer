@@ -1,9 +1,11 @@
 {
   "manifestVersion": 2,
-  "id": "convert-viewer",
-  "name": "Convert Viewer",
+  "id": "everything-viewer",
+  "name": "Everything Viewer",
   "version": "0.1.0",
-  "description": "Read legacy Office, OpenDocument, Visio, Publisher and iWork files as PDF (LibreOffice) and .blend scenes in 3D (Blender) in Orca's editor.",
+  "description": "Opens files nothing else in Orca shows: legacy Office, OpenDocument, Pages/Numbers and PowerPoint as pages (LibreOffice), Blender scenes in 3D, JPEG 2000, older video/audio (ffmpeg), and JSON/YAML/TOML/XML as a tree. Extensions are configured in formats.json.",
+  "license": "MIT",
+  "repository": "https://github.com/net-runners-com/everything-viewer",
   "engines": {
     "orca": ">=1.4.248"
   },

@@ -1,8 +1,8 @@
 // Renders a PDF with the vendored pdf.js: pages stacked, rendered lazily as they scroll in.
 import type { Translate, View } from '../lib/view'
-import * as pdfjs from '../vendor/pdfjs/pdf.min.mjs'
+import * as pdfjs from '../vendor/pdfjs/pdf.mjs'
 
-pdfjs.GlobalWorkerOptions.workerSrc = new URL('../vendor/pdfjs/pdf.worker.min.mjs', import.meta.url).href
+pdfjs.GlobalWorkerOptions.workerSrc = new URL('../vendor/pdfjs/pdf.worker.mjs', import.meta.url).href
 
 const GAP = 12
 

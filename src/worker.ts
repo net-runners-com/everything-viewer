@@ -160,7 +160,7 @@ const registry = createRegistry(JSON.parse(readFileSync(new URL('../formats.json
 export default createWorker({
   registry,
   exec: runTool,
-  cacheDir: join(homedir(), 'Library', 'Caches', 'orca-convert-viewer'),
+  cacheDir: join(homedir(), 'Library', 'Caches', 'orca-everything-viewer'),
   locate: (id) => locateFrom(registry.file.converters[id]),
   loadConverter: async (id) => (await import(`./converters/${id}.ts`)).default as Converter
 })

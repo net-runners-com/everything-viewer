@@ -1,5 +1,5 @@
 // Shows a GLB with the vendored three.js: orbit/zoom/pan, a floor grid, framed to the model.
-import * as THREE from '../vendor/three/three.module.min.js'
+import * as THREE from '../vendor/three/three.module.js'
 import { GLTFLoader } from '../vendor/three/GLTFLoader.js'
 import { OrbitControls } from '../vendor/three/OrbitControls.js'
 
