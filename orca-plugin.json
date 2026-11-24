@@ -3,7 +3,11 @@
   "id": "everything-viewer",
   "name": "Everything Viewer",
   "publisher": "net-runners-com",
-  "version": "0.1.1",
+  "author": {
+    "name": "net-runners-com",
+    "url": "https://github.com/net-runners-com"
+  },
+  "version": "0.1.2",
   "description": "Opens files nothing else in Orca shows: legacy Office, OpenDocument, Pages/Numbers and PowerPoint as pages (LibreOffice), Blender scenes in 3D, JPEG 2000, older video/audio (ffmpeg), and JSON/YAML/TOML/XML as a tree. Extensions are configured in formats.json.",
   "license": "MIT",
   "repository": "https://github.com/net-runners-com/everything-viewer",
