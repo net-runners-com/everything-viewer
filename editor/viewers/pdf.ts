@@ -9,8 +9,8 @@ const GAP = 12
 async function showPdf(root: HTMLElement, data: Uint8Array, t: Translate): Promise<void> {
   const pdf = await pdfjs.getDocument({
     data,
-    cMapUrl: new URL('../vendor/pdfjs/cmaps/', import.meta.url).href,
-    cMapPacked: true,
+    // No CMaps are bundled (the plugin catalog takes no binary files): CJK PDFs that rely on
+    // predefined CMaps without embedded fonts may miss glyphs. Embedded-font PDFs are unaffected.
     isEvalSupported: false
   }).promise
 
